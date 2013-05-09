@@ -7,7 +7,8 @@ class CardDefs:
     DIAMONDS = "D"
     CLUBS = "C"
     all_suits = [HEARTS, DIAMONDS, SPADES, CLUBS]
-    ordered_card_values = {"A":0, "K":1, "Q":2, "J":3, "T":4, "9":5, "8":6, "7":7, "6":8, "5":9, "4":10, "3":11, "2":12}
+    card_ranks = {"A":0, "K":1, "Q":2, "J":3, "T":4, "9":5, "8":6, "7":7, "6":8, "5":9, "4":10, "3":11, "2":12}
+    card_ranks_as_str = "AKQJT98765432"
 
     ROYAL_FLUSH = "ROYAL_FLUSH"
     STRAIGHT_FLUSH = "STRAIGHT_FLUSH"
@@ -31,12 +32,15 @@ class Card:
 
         self.value = self.extract_value(str_rep)
         self.suit = self.extract_suit(str_rep)
-        self.rank = CardDefs.ordered_card_values.get(self.value)
+        self.rank = CardDefs.card_ranks.get(self.value)
 
-        if (self.suit not in CardDefs.all_suits or self.value not in CardDefs.ordered_card_values.keys()):
+        if (self.suit not in CardDefs.all_suits or self.value not in CardDefs.card_ranks.keys()):
             self.usage()
             return
 
+
+    def is_better_than(self, other_card):
+        return self.rank > other_card.rank
 
     def extract_value(self, str_rep):
         return str_rep[0:1]  # extract first char
@@ -52,7 +56,7 @@ class Card:
 
     def usage(self):
         print "Usage: Card('<value><suit>')\n\twhere"
-        print "\tvalue is one of: " + ", ".join(CardDefs.ordered_card_values.keys())
+        print "\tvalue is one of: " + ", ".join(CardDefs.card_ranks.keys())
         print "\tsuit is one of: " + ", ".join(CardDefs.all_suits)
 
 # represents the 5 cards in the player's hand
@@ -67,7 +71,7 @@ class Hand:
     @classmethod
     def from_card_reps(cls, card_reps):
         if card_reps == None or len(card_reps) < 5:
-            self.usage()
+            cls.usage()
             return
 
         cards = []
@@ -80,7 +84,7 @@ class Hand:
     @classmethod
     def from_cards(cls, cards_arg):
         if cards_arg == None or len(cards_arg) < 5:
-            self.usage()
+            cls.usage()
             return
 
         return cls(cards_arg)
@@ -88,7 +92,7 @@ class Hand:
     @classmethod
     def from_tuple(cls, card_tuple):
         if card_tuple == None or len(card_tuple) < 5:
-            self.usage()
+            cls.usage()
             return
 
         cards = []
@@ -106,8 +110,8 @@ class Hand:
             ret += card.value
         return ret
 
-    def set_hand_type(self, type):
-        self.poker_hand_type = type
+    def set_hand_type(self, htype):
+        self.poker_hand_type = htype
 
     def is_better_than(self, other_hand):
         if self.poker_hand_type == None or other_hand.poker_hand_type == None:
@@ -118,8 +122,16 @@ class Hand:
         
         if hand_rank < other_rank:
             return True
+
+        if hand_rank == other_rank:
+            for hcard in self.cards:
+                for ocard in other_hand.cards:
+                    if hcard.is_better_than(ocard):
+                        return True
+        # hand_rank < other_rank or hand_rank == other_hand_rank and hand card ranks <= other hand card ranks 
         return False
 
+    @classmethod
     def usage(self):
         print "Usage: Hand(<list of cards>)\n"
         print "\twhere each card is represented by a 2-char code for <value><suit>"
@@ -155,10 +167,8 @@ class PsychicPoker:
             deck_rep = deal[5:10]
             #print "Hand: " + " ".join(hand_rep) + "  Deck: " + " ".join(deck_rep)
             best_hand = self.play_hand(hand_rep, deck_rep)
-            #print "Dealt Hand: " + " ".join(hand_rep) + "  Deck: " + " ".join(deck_rep) + "  Best Hand: " + best_hand
-            print "Dealt Hand: " + " ".join(hand_rep)
-            print "\tDeck: " + " ".join(deck_rep) + "\nBest Hand: "
-            print best_hand.cards
+            #print "Dealt Hand: " + " ".join(hand_rep) + "\tDeck: " + " ".join(deck_rep) + "\tBest Hand: " + best_hand.__str__() + " (" + best_hand.poker_hand_type + ")"
+            print " ".join(hand_rep) + " " + " ".join(deck_rep) + " " + best_hand.__str__()
 
 
     def play_hand(self, hand_rep, deck_rep):
@@ -180,18 +190,6 @@ class PsychicPoker:
         return self.find_best_hand(hand, deck)
     
 
-    def get_suit_counts(self, hand):
-        suit_counts = {}
-        for card in hand.cards:
-            counter = {}
-            counter[CardDefs.HEARTS] += 1 if card.suit == CardDefs.HEARTS else 0
-            counter[CardDefs.DIAMONDS] += 1 if card.suit == CardDefs.DIAMONDS else 0
-            counter[CardDefs.SPADES] += 1 if card.suit == CardDefs.SPADES else 0
-            counter[CardDefs.CLUBS] += 1 if card.suit == CardDefs.CLUBS else 0
-            suit_counts.append(counter)
-
-        return suit_counts
-
     def find_best_hand(self, hand, deck):
         # detect best hand in order of definition of what is "best":
         # royal flush, straight flush, four of a kind, full house, flush, straight, three of a kind, two pair, one pair, high card
@@ -205,21 +203,21 @@ class PsychicPoker:
         combined_cards = hand.cards + deck.cards;
         combined_hand = Hand.from_cards(combined_cards)
         combined_hand.sort_by_rank()
-        print "--------------- combined sorted hand ---------------"
-        print combined_hand.cards
+        #print "--------------- combined sorted hand ---------------"
+        #print combined_hand.cards
         hand_generator = combinations(combined_hand.cards, 5)
 
         best_hand = None
 
         for gen_hand in hand_generator:
-            print "--------- gen hand --------------"
-            print type(gen_hand)
+            #print "--------- gen hand --------------"
+            #print type(gen_hand)
             new_hand = Hand.from_tuple(gen_hand)
-            print "--------------- new hand ---------------"
-            print new_hand.cards
+            #print "--------------- new hand ---------------"
+            #print new_hand.cards
             new_hand.sort_by_rank()
-            print "--------------- sorted new hand ---------------"
-            print new_hand.cards
+            #print "--------------- sorted new hand ---------------"
+            #print new_hand.cards
 
             if (self.is_royal_flush(new_hand)):
                 new_hand.set_hand_type(CardDefs.ROYAL_FLUSH)
@@ -228,32 +226,39 @@ class PsychicPoker:
             # in the below if's, don't return right away, one of the not-yet-checked hands could be better than this
             if (self.is_straight_flush(new_hand)):
                 new_hand.set_hand_type(CardDefs.STRAIGHT_FLUSH)
-            elif (self.is_four_of_a_kind(new_hand)):
-                new_hand.set_hand_type(CardDefs.FOUR_OF_A_KIND)
-            elif (self.is_full_house(new_hand)):
-                new_hand.set_hand_type(CardDefs.FULL_HOUSE)
-            elif (self.is_flush(new_hand)):
-                new_hand.set_hand_type(CardDefs.FLUSH)
-            elif (self.is_straight(new_hand)):
-                new_hand.set_hand_type(CardDefs.STRAIGHT)
-            elif (self.is_three_of_a_kind(new_hand)):
-                new_hand.set_hand_type(CardDefs.THREE_OF_A_KIND)
-            elif (self.is_two_pair(new_hand)):
-                new_hand.set_hand_type(CardDefs.TWO_PAIR)
-            elif (self.is_one_pair(new_hand)):
-                new_hand.set_hand_type(CardDefs.ONE_PAIR)
-            else: # by default, if not anything else, its a HIGH_CARD hand
-                new_hand.set_hand_type(CardDefs.HIGH_CARD)
+            else:
+                top_tuple = self.get_top_n_of_a_kind(new_hand)
+                max_card_count = top_tuple[0]
+                second_card_count = top_tuple[1]
 
-            if (best_hand is None):
+                if (self.is_four_of_a_kind(max_card_count, second_card_count)):
+                    new_hand.set_hand_type(CardDefs.FOUR_OF_A_KIND)
+                elif (self.is_full_house(max_card_count, second_card_count)):
+                    new_hand.set_hand_type(CardDefs.FULL_HOUSE)
+                elif (self.is_flush(new_hand)):
+                    new_hand.set_hand_type(CardDefs.FLUSH)
+                elif (self.is_straight(new_hand)):
+                    new_hand.set_hand_type(CardDefs.STRAIGHT)
+                elif (self.is_three_of_a_kind(max_card_count, second_card_count)):
+                    new_hand.set_hand_type(CardDefs.THREE_OF_A_KIND)
+                elif (self.is_two_pair(max_card_count, second_card_count)):
+                    new_hand.set_hand_type(CardDefs.TWO_PAIR)
+                elif (self.is_one_pair(max_card_count, second_card_count)):
+                    new_hand.set_hand_type(CardDefs.ONE_PAIR)
+                else: # by default, if not anything else, its a HIGH_CARD hand
+                    new_hand.set_hand_type(CardDefs.HIGH_CARD)
+
+            if best_hand is None:
                 best_hand = new_hand
                 continue
 
-            if (new_hand.is_better_than(best_hand)):
-                    best_hand = new_hand
+            if new_hand.is_better_than(best_hand):
+                #print new_hand.__str__() + " (" + new_hand.poker_hand_type + ") is better than: " + best_hand.__str__() + " (" + best_hand.poker_hand_type + ")"
+                best_hand = new_hand
 
         return best_hand
 
+    # poker hand definition functions
     # assumes sorted hand
     def is_royal_flush(self, hand):
         if (self.is_straight_flush(hand) and hand.cards[0].value == "A"):
@@ -266,11 +271,15 @@ class PsychicPoker:
             return True
         return False 
 
-    def is_four_of_a_kind(self, hand):
-        pass
+    def is_four_of_a_kind(self, max_card_count, second_card_count):
+        if max_card_count == 4:
+            return True
+        return False
 
-    def is_full_house(self, hand):
-        pass
+    def is_full_house(self, max_card_count, second_card_count):
+        if max_card_count == 3 and second_card_count == 2:
+            return True
+        return False
 
     def is_flush(self, hand):
         prev_suit = None
@@ -284,28 +293,63 @@ class PsychicPoker:
 
     # assumes sorted hand
     def is_straight(self, hand):
-        print "--------- got hand: ---------"
-        print hand.cards
-        ordered_vals_as_str = "".join(CardDefs.ordered_card_values.keys())
-        print "---------- ordered_vals_as_str -----------"
-        print ordered_vals_as_str
+        #print "--------- got hand: ---------"
+        #print hand.cards
+        #print "---------- card_ranks_as_str -----------"
+        #print CardDefs.card_ranks_as_str
         hand_vals_as_str = hand.get_card_values_as_string()
-        print "---------- hand_vals_as_str -----------"
-        print hand_vals_as_str
-        if hand_vals_as_str in ordered_vals_as_str: # found a straight!
+        #print "---------- hand_vals_as_str -----------"
+        #print hand_vals_as_str
+        if hand_vals_as_str in CardDefs.card_ranks_as_str: # found a straight!
             return True
 
-    def is_three_of_a_kind(self, hand):
-        pass
+        return False
 
-    def is_two_pair(self, hand):
-        pass
+    def is_three_of_a_kind(self, max_card_count, second_card_count):
+        if max_card_count == 3 and second_card_count < 2:
+            return True
+        return False
 
-    def is_one_pair(self, hand):
-        pass
+    def is_two_pair(self, max_card_count, second_card_count):
+        if max_card_count == 2 and second_card_count == 2:
+            return True
+        return False
+
+    def is_one_pair(self, max_card_count, second_card_count):
+        if max_card_count == 2 and second_card_count < 2:
+            return True
+        return False
 
     def is_high_card(self, hand):
         pass
+
+    # end poker hand definition functions
+
+    # helper functions
+    def get_top_n_of_a_kind(self, hand):
+        cc = self.get_card_counts(hand)
+        max_count = 1
+        second_count = 1
+
+        for card_val in cc.keys():
+            cc_count = cc.get(card_val)
+            if cc_count > max_count:
+                max_count = cc_count
+            elif cc_count > second_count:
+                second_count = cc_count
+        return (max_count, second_count)
+
+
+    def get_card_counts(self, hand):
+        dcounts = {}
+        for card in hand.cards: # initialization loop
+            dcounts[card.value] = 0
+
+        for card in hand.cards:
+            dcounts[card.value] += 1
+
+        return dcounts
+
 
 
 
