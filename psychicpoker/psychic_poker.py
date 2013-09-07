@@ -216,7 +216,7 @@ class PsychicPoker:
             hand_generator = combinations(hand.cards, i) # keeping i cards from the hand, rest from the deck
             num_cards_from_deck = 5 - i
 
-	    if i < 5:
+	    if num_cards_from_deck > 0:
 	      popped_cards.append(deck.pop())
 
             deck_tuple = tuple(popped_cards)
@@ -351,7 +351,34 @@ class PsychicPoker:
 
 # end PsychicPoker class
 
+def psychic_usage():
+    print "Usage: python psychicpoker.py <input text file name>\n"
+    print """
+    Input file must consist of a series of lines, each containing the initial five cards in the hand then the first five cards on top of the deck. Each card is represented as a two-character code. The first character is the face-value (A=Ace, 2-9, T=10, J=Jack, Q=Queen, K=King) and the second character is the suit (C=Clubs, D=Diamonds, H=Hearts, S=Spades).
+
+    Cards will be separated by single spaces. Each input line will be from a single valid deck, that is there will be no duplicate cards in each hand and deck.
+
+    Each line of input should produce one line of output, consisting of the initial hand, the top five cards on the deck, and the best value of hand that is possible. Input is terminated by end of file.
+"""
+    
+    print "\tan example is as follows:\n"
+    print """
+ TH JH QC QD QS QH KH AH 2S 6S
+ 2H 2S 3H 3S 3C 2D 3D 6C 9C TH
+ 2H 2S 3H 3S 3C 2D 9C 3D 6C TH
+ 2H AD 5H AC 7H AH 6H 9H 4H 3C
+ AC 2D 9C 3S KD 5S 4D KS AS 4C
+ KS AH 2H 3C 4H KC 2C TC 2D AS
+ AH 2C 9S AD 3C QH KS JS JD KD
+ 6C 9C 8C 2D 7C 2H TC 4C 9S AH
+ 3D 5S 2H QD TD 6S KH 9H AD QH
+ """
+  
 if __name__ == "__main__":
+    if len(sys.argv) < 2:
+      psychic_usage()
+      sys.exit(0)
+
     pp = PsychicPoker(sys.argv[1])
     pp.play_all_deals()
 
