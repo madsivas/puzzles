@@ -37,10 +37,6 @@ class Card:
             self.usage()
             return
 
-
-    def is_better_than(self, other_card):
-        return self.rank > other_card.rank
-
     def extract_value(self, str_rep):
         return str_rep[0:1]  # extract first char
 
@@ -126,11 +122,12 @@ class Hand:
             return True
 
         if hand_rank == other_rank:
-            for hcard in self.cards:
-                for ocard in other_hand.cards:
-                    if hcard.is_better_than(ocard):
-                        return True
-        # hand_rank > other_rank or (hand_rank == other_hand_rank and hand card ranks <= other hand card ranks) 
+            for (hcard, ocard) in zip(self.cards, other_hand.cards):
+		if hcard.rank < ocard.rank:
+		    return True
+		elif hcard.rank > ocard.rank:
+		    return False
+		# otherwise continue with next iter of loop
         return False
 
     @classmethod
@@ -214,7 +211,8 @@ class PsychicPoker:
         popped_cards = []
         # try all combinations of hand cards, starting with keeping all 5 hand cards,
 	# then discarding 1 and picking 1 from the deck, then discarding 2 and picking 2 from the deck, etc...  
-        for i in range(5, 0, -1):
+        for j in range(6, 0, -1):
+	    i = j - 1 # for loop ranges from 6 down to 1, but we want indexes from 5..0
             hand_generator = combinations(hand.cards, i) # keeping i cards from the hand, rest from the deck
             num_cards_from_deck = 5 - i
 
@@ -276,25 +274,17 @@ class PsychicPoker:
     # poker hand definition functions
     # assumes sorted hanTH JH QC QD QS QH KH AH 2S 6Sd
     def is_royal_flush(self, hand):
-        if (self.is_straight_flush(hand) and hand.cards[0].value == "A"):
-            return True
-        return False
+        return self.is_straight_flush(hand) and hand.cards[0].value == "A"
 
     # assumes sorted hand
     def is_straight_flush(self, hand):
-        if self.is_straight(hand) and self.is_flush(hand):
-            return True
-        return False 
+        return self.is_straight(hand) and self.is_flush(hand)
 
     def is_four_of_a_kind(self, max_card_count, second_card_count):
-        if max_card_count == 4:
-            return True
-        return False
+        return max_card_count == 4
 
     def is_full_house(self, max_card_count, second_card_count):
-        if max_card_count == 3 and second_card_count == 2:
-            return True
-        return False
+        return max_card_count == 3 and second_card_count == 2
 
     def is_flush(self, hand):
         prev_suit = None
@@ -320,19 +310,13 @@ class PsychicPoker:
         return False
 
     def is_three_of_a_kind(self, max_card_count, second_card_count):
-        if max_card_count == 3 and second_card_count < 2:
-            return True
-        return False
+        return max_card_count == 3 and second_card_count < 2
 
     def is_two_pair(self, max_card_count, second_card_count):
-        if max_card_count == 2 and second_card_count == 2:
-            return True
-        return False
+        return max_card_count == 2 and second_card_count == 2
 
     def is_one_pair(self, max_card_count, second_card_count):
-        if max_card_count == 2 and second_card_count < 2:
-            return True
-        return False
+        return max_card_count == 2 and second_card_count < 2
 
     def is_high_card(self, hand):
         pass
@@ -351,7 +335,6 @@ class PsychicPoker:
                 max_count = cc_count
             elif cc_count > second_count:
                 second_count = cc_count
-	print "get_top_n_of_a_kind found counts %d, %d" % (max_count, second_count)
         return (max_count, second_count)
 
 
